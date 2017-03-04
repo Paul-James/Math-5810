@@ -7,6 +7,7 @@
 # You can adjust the folder relative to your desired working directory
 # Usually I assume the working directory is the home of bigvis-06.R
 
+
 library(ggplot2)
 library(dplyr)
 library(bigvis)
@@ -17,7 +18,7 @@ library(bigvis)
 # ../Data/Airline contains lots of data files
 # we can read the file names
 temp = list.files(path = "C:/Users/Ian/Google Drive/Data/Airline", full.names=TRUE)
-# you should check that temp contains the file names - otherwise you have a 
+# you should check that temp contains the file names - otherwise you have a
 # problem with where you stored your data or the path name above
 temp
 
@@ -31,7 +32,7 @@ all = lapply(all, tbl_df)
 flights = bind_rows(all)
 
 # the variables we will use are the following:
-flights = select(flights, 
+flights = select(flights,
                  DAY_OF_WEEK,
                  DEP_TIME,
                  ARR_TIME,
@@ -54,7 +55,7 @@ dist = flights$DISTANCE
 airtime = flights$AIR_TIME
 depdelay = flights$DEP_DELAY
 # time is in minutes, speed in miles per hour
-speed = dist / (airtime / 60 ) 
+speed = dist / (airtime / 60 )
 
 time = flights$ARR_TIME
 hours = floor(time/100)
@@ -71,7 +72,7 @@ autoplot(smooth(dayofweek_sum, 10))
 #If I did this right there are more flights on Monday than the rest of the week
 
 
-#This one is trying to show how many departure delays across the data and 
+#This one is trying to show how many departure delays across the data and
 #It seems like most made it out on time or earlier
 depdelay_sum = condense(bin(depdelay, 100))
 autoplot(depdelay_sum)

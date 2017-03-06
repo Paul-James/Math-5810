@@ -17,19 +17,19 @@ library(bigvis)
 
 # ../Data/Airline contains lots of data files
 # we can read the file names
-temp = list.files(path = "C:/Users/Ian/Google Drive/Data/Airline", full.names=TRUE)
-# you should check that temp contains the file names - otherwise you have a
+fnames = list.files(path = "C:/Users/Ian/Google Drive/Data/Airline", full.names=TRUE)
+# you should check that fnames contains the file names - otherwise you have a
 # problem with where you stored your data or the path name above
-temp
+fnames
 
 # read in the contents of each file
-all = lapply(temp, read.csv, header=TRUE)
+airline_cut = lapply(fnames, read.csv, header=TRUE)
 
 # convert to tibbles
-all = lapply(all, tbl_df)
+airline_cut = lapply(airline_cut, tbl_df)
 
 # and combine them:
-flights = bind_rows(all)
+flights = bind_rows(airline_cut)
 
 # the variables we will use are the following:
 flights = select(flights,

@@ -25,15 +25,15 @@ fnames <- list.files(
 fnames
 
 # read in the contents of each file
-airline_cut <- lapply(fnames, data.table::fread, data.table = F)
+flights <- lapply(fnames, data.table::fread, data.table = F)
 
 # and combine them:
-flights <- as_data_frame(bind_rows(airline_cut))
-
-# the variables we will use are the following:
 flights %<>%
+  bind_rows() %>%
+  as_data_frame() %>%
+  # the variables we will use are the following:
   select(
-      DAY_OF_WEEK
+    DAY_OF_WEEK
     , DEP_TIME
     , ARR_TIME
     , ARR_DELAY
@@ -41,7 +41,6 @@ flights %<>%
     , AIR_TIME
     , DISTANCE
   )
-
 
 # notice that some of the values are missing
 sum(is.na(flights))

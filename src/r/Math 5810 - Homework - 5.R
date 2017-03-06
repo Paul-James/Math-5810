@@ -7,17 +7,12 @@
 # You can adjust the folder relative to your desired working directory
 # Usually I assume the working directory is the home of bigvis-06.R
 
-myLibrary(
-    'bigvis'
-  , 'magrittr'
-)
 
-# library(ggplot2)
-# library(dplyr)
-# library(bigvis)
-# library(reshape2)
-# library(scales)
-# library(grid)
+library(magrittr)
+library(data.table)
+library(tidyverse)
+library(bigvis)
+library(scales)
 
 # ../Data/Airline contains lots of data files
 # we can read the file names

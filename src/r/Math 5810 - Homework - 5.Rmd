@@ -1,0 +1,254 @@
+---
+title: "Math 5810 - Homework 5"
+author: "Professor X"
+date: "`r strftime(Sys.Date(), format = '%B %d, %Y')`"
+output:
+  html_document:
+    theme: flatly
+    highlight: zenburn
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T)
+```
+
+# Introduction
+
+Using Hadley's `bigvis` for the airline data 2013 to 2016
+
+To use this code, first run the code in install-bigvis.R then unzip the file Airline.7z (I use 7-zip) into the folder `../Data/Airline`. You can adjust the folder relative to your desired working directory. Usually I assume the working directory is the home of `bigvis-06.R`
+
+# Setup
+
+```{r}
+devtools::session_info()
+```
+
+```{r, message=FALSE}
+library(magrittr)   # pipe operators
+library(data.table) # fast/effiecient read
+library(tidyverse)  # loads dplyr, ggplot2, reshape2, etc.
+                    # https://blog.rstudio.org/2016/09/15/tidyverse-1-0-0/
+library(bigvis)
+library(scales)
+# library(grid)
+```
+
+# Get the Data
+
+`../Data/Airline` contains lots of data files. We can read the file names:
+
+```{r}
+fnames <- list.files(
+    path       = '../../data/airline-cut'
+  , full.names = T
+  )
+```
+
+You should check that fnames contains the file names. Otherwise you have a problem with where you stored your data or the path name above
+
+```{r}
+fnames
+```
+
+Read in the contents of each file and combine them, then free up a bunch of memory by reassigning the initial list object we used to read in the data:
+
+```{r}
+flights <- lapply(
+    X          = fnames
+  , FUN        = data.table::fread
+  , data.table = F
+  )
+
+flights %<>%
+  bind_rows() %>% 
+  as_data_frame()
+```
+
+# Subset the data
+
+The variables we will use are the following:
+
+```{r}
+flights %<>%
+  select(
+      DAY_OF_WEEK
+    , DEP_TIME
+    , ARR_TIME
+    , ARR_DELAY
+    , DEP_DELAY
+    , AIR_TIME
+    , DISTANCE
+  )
+```
+
+Notice that some of the values are missing. You can remove them if you like using
+`flights = na.omit(flights)`. I'm using the original with missing values included:
+
+```{r}
+flights %>% 
+  is.na() %>% 
+  sum()
+```
+
+Rename some columns for convenience:
+
+```{r}
+names(flights) <- c(
+    'dayofweek'
+  , 'deptime'
+  , 'time'
+  , 'delay'
+  , 'depdelay'
+  , 'airtime'
+  , 'dist'
+)
+```
+
+Add our calculated fields:
+```{r}
+flights %<>%
+  mutate(
+      speed = dist / (airtime / 60)
+    , hours = floor(time / 100)
+    , mins  = time - 100 * hours
+    , time  = hours + (mins / 60)
+  )
+```
+
+Time is in minutes, speed in miles per hour.
+
+# Viz Creation
+
+## Day with most flights
+
+This is where I was going to find out if there was a day of the week that had more flights. If I did this right there are more flights on Monday than the rest of the week.
+
+```{r, message=FALSE}
+dayofweek_sum <- bin(
+    x     = flights$dayofweek
+  , width = 1
+  ) %>% 
+  condense()
+
+dayofweek_sum %>%
+  autoplot()
+
+dayofweek_sum %>% 
+  smooth(h = 10) %>% 
+  autoplot()
+```
+
+
+## Departure delays
+
+This one is trying to show how many departure delays across the data and it seems like most made it out on time or earlier.
+
+```{r, message=FALSE}
+depdelay_sum <- bin(
+    x     = flights$depdelay
+  , width = 100
+  ) %>% 
+  condense()
+
+depdelay_sum %>% 
+  autoplot()
+
+depdelay_sum %>% 
+  smooth(h = 1000) %>% 
+  autoplot()
+```
+
+## On time departures by day of week
+
+I tried to see if there day of week made a difference of departing on time. I think it also shows that most flights leave in the morning and all the later flights happen during midweek.
+
+```{r, message=FALSE}
+daydelay <- condense(
+    bin(flights$dayofweek, 1)
+  , bin(flights$depdelay, 60)
+  )
+
+daydelay %>% 
+  autoplot()
+
+daydelay %>% 
+  peel() %>% 
+  autoplot()
+```
+
+## Airtime
+
+```{r, message=FALSE}
+teaser <- list(
+    theme(
+      legend.position  = "bottom"
+    , plot.margin      = unit(c(0, 0.5, 0, 0.5), "lines")
+    , legend.key.width = unit(1.45, "inches")
+    , text             = element_text(size = 24)
+  )
+  , labs(
+      x    = NULL
+    , y    = NULL
+    , fill = NULL
+    )
+)
+
+daydeld <- condense(
+    bin(flights$dayofweek, 1)
+  , bin(flights$depdelay, 120)
+  , z = flights$airtime
+  )
+
+daydeld %<>%
+  subset(flights.dayofweek > 0)
+
+daydeld %>% 
+  autoplot() + teaser
+
+
+airtime_sum <- bin(
+    x     = flights$airtime
+  , width = 100
+  ) %>% 
+  condense()
+
+airtime_sum %>% 
+  autoplot()
+
+airtime_sum %>% 
+  smooth(h = 1000) %>% 
+  autoplot()
+```
+
+## Airtime vs Departure delays
+
+This one was comparing airtime and departure delay. It looks to me like the more airtime you have on a flight, the less likely you are to depart late.
+
+```{r, message=FALSE}
+airdelay <- condense(
+    bin(flights$airtime, 10)
+  , bin(flights$depdelay, 10)
+  )
+
+airdelay %>% 
+  autoplot()
+
+airdelay %>% 
+  peel() %>% 
+  autoplot()
+
+airdelayd <- condense(
+    bin(flights$airtime, 10)
+  , bin(flights$depdelay, 10)
+  , z = flights$dist
+  )
+airdelayd %<>%
+  subset(flights.airtime > 100)
+
+airdelayd %>% 
+  autoplot() + teaser
+```

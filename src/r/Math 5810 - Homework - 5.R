@@ -7,39 +7,45 @@
 # You can adjust the folder relative to your desired working directory
 # Usually I assume the working directory is the home of bigvis-06.R
 
+myLibrary(
+    'bigvis'
+  , 'magrittr'
+)
 
-library(ggplot2)
-library(dplyr)
-library(bigvis)
-#library(reshape2)
-#library(scales)
-#library(grid)
+# library(ggplot2)
+# library(dplyr)
+# library(bigvis)
+# library(reshape2)
+# library(scales)
+# library(grid)
 
 # ../Data/Airline contains lots of data files
 # we can read the file names
-fnames = list.files(path = "C:/Users/Ian/Google Drive/Data/Airline", full.names=TRUE)
+fnames <- list.files(
+    path       = '../../data/airline-cut'
+  , full.names = T
+  )
 # you should check that fnames contains the file names - otherwise you have a
 # problem with where you stored your data or the path name above
 fnames
 
 # read in the contents of each file
-airline_cut = lapply(fnames, read.csv, header=TRUE)
-
-# convert to tibbles
-airline_cut = lapply(airline_cut, tbl_df)
+airline_cut <- lapply(fnames, data.table::fread, data.table = F)
 
 # and combine them:
-flights = bind_rows(airline_cut)
+flights <- as_data_frame(bind_rows(airline_cut))
 
 # the variables we will use are the following:
-flights = select(flights,
-                 DAY_OF_WEEK,
-                 DEP_TIME,
-                 ARR_TIME,
-                 ARR_DELAY,
-                 DEP_DELAY,
-                 AIR_TIME,
-                 DISTANCE)
+flights %<>%
+  select(
+      DAY_OF_WEEK
+    , DEP_TIME
+    , ARR_TIME
+    , ARR_DELAY
+    , DEP_DELAY
+    , AIR_TIME
+    , DISTANCE
+  )
 
 
 # notice that some of the values are missing
@@ -50,23 +56,21 @@ sum(is.na(flights))
 # I'm using the original with missing values included
 
 # More convenient to extract the variables we want to use
-delay = flights$ARR_DELAY
-dist = flights$DISTANCE
-airtime = flights$AIR_TIME
-depdelay = flights$DEP_DELAY
+delay     <- flights$ARR_DELAY
+dist      <- flights$DISTANCE
+airtime   <- flights$AIR_TIME
+depdelay  <- flights$DEP_DELAY
+time      <- flights$ARR_TIME
+dayofweek <- flights$DAY_OF_WEEK
+
 # time is in minutes, speed in miles per hour
-speed = dist / (airtime / 60 )
+speed <- dist / (airtime / 60)
+hours <- floor(time / 100)
+mins  <- time - 100 * hours
+time  <- hours + (mins / 60)
 
-time = flights$ARR_TIME
-hours = floor(time/100)
-mins = time-100*hours
-time = hours + (mins/60)
-
-
-
-#This is where I was going to find out if there was a day of the week that had more flights
-dayofweek = flights$DAY_OF_WEEK
-dayofweek_sum = condense(bin(dayofweek, width=1))
+# This is where I was going to find out if there was a day of the week that had more flights
+dayofweek_sum <- condense(bin(dayofweek, width = 1))
 autoplot(dayofweek_sum)
 autoplot(smooth(dayofweek_sum, 10))
 #If I did this right there are more flights on Monday than the rest of the week
@@ -74,7 +78,7 @@ autoplot(smooth(dayofweek_sum, 10))
 
 #This one is trying to show how many departure delays across the data and
 #It seems like most made it out on time or earlier
-depdelay_sum = condense(bin(depdelay, 100))
+depdelay_sum <- condense(bin(depdelay, 100))
 autoplot(depdelay_sum)
 autoplot(smooth(depdelay_sum, 1000))
 
@@ -82,45 +86,61 @@ autoplot(smooth(depdelay_sum, 1000))
 #I tried to see if there day of week made a difference of departing on time.
 #I think it also shows that most flights leave in the morning.
 #and all the later flights happen during midweek.
-daydelay = condense(bin(dayofweek, 1), bin(depdelay, 60))
+daydelay <- condense(bin(dayofweek, 1), bin(depdelay, 60))
 autoplot(daydelay)
 autoplot(peel(daydelay))
 
-teaser = list(
-  theme(
-    legend.position = "bottom",
-    plot.margin = unit(c(0, 0.5, 0, 0.5), "lines"),
-    legend.key.width = unit(1.45, "inches"),
-    text = element_text(size = 24)
-  ),
-  labs(x = NULL, y = NULL, fill = NULL)
+teaser <- list(
+    theme(
+      legend.position  = "bottom"
+    , plot.margin      = unit(c(0, 0.5, 0, 0.5), "lines")
+    , legend.key.width = unit(1.45, "inches")
+    , text             = element_text(size = 24)
+  )
+  , labs(
+      x    = NULL
+    , y    = NULL
+    , fill = NULL
+    )
 )
 
-daydeld = condense(bin(dayofweek, 1), bin(depdelay, 120), z = airtime)
-daydeld = subset(daydeld, dayofweek > 0)
+daydeld <- condense(
+    bin(dayofweek, 1)
+  , bin(depdelay, 120)
+  , z = airtime
+  )
+daydeld <- subset(daydeld, dayofweek > 0)
 autoplot(daydeld) + teaser
 
-airtime_sum = condense(bin(airtime, 100))
+airtime_sum <- condense(bin(airtime, 100))
 autoplot(airtime_sum)
 autoplot(smooth(airtime_sum, 1000))
 
 #This one was comparing airtime and departure delay.
 #It looks to me like the more airtime you have on a flight,
 #the less likely you are to depart late.
-airdelay = condense(bin(airtime, 10), bin(depdelay, 10))
+airdelay <- condense(bin(airtime, 10), bin(depdelay, 10))
 autoplot(airdelay)
 autoplot(peel(airdelay))
 
-teaser = list(
-  theme(
-    legend.position = "bottom",
-    plot.margin = unit(c(0, 0.5, 0, 0.5), "lines"),
-    legend.key.width = unit(1.45, "inches"),
-    text = element_text(size = 24)
-  ),
-  labs(x = NULL, y = NULL, fill = NULL)
+teaser <- list(
+    theme(
+      legend.position  = "bottom"
+    , plot.margin      = unit(c(0, 0.5, 0, 0.5), "lines")
+    , legend.key.width = unit(1.45, "inches")
+    , text             = element_text(size = 24)
+  )
+  , labs(
+      x    = NULL
+    , y    = NULL
+    , fill = NULL
+    )
 )
 
-airdelayd = condense(bin(airtime, 10), bin(depdelay, 10), z = dist)
-airdelayd = subset(airdelayd, airtime > 100)
+airdelayd <- condense(
+    bin(airtime, 10)
+  , bin(depdelay, 10)
+  , z = dist
+  )
+airdelayd <- subset(airdelayd, airtime > 100)
 autoplot(airdelayd) + teaser
